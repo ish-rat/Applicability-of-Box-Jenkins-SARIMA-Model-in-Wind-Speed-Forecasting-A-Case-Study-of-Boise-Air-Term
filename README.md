@@ -1,2 +1,2 @@
 # Applicability-of-Box-Jenkins-SARIMA-Model-in-Wind-Speed-Forecasting-A-Case-Study-of-Boise-Air-Terminal,IDAHO
-This project describes an empirical study of modeling and forecasting time series monthly data of average wind speed in Boise Air Terminal, ID US.
+This project describes an empirical study of modeling and forecasting time series monthly data of average wind speed in Boise Air Terminal, ID US. The Box-Jenkins SARIMA (Seasonal Autoregressive Integrated Moving Average) Methodology has been used for forecasting. The diagnostic checking has shown that the model SARIMA (1, 0, 0) × (0, 1, 1)12 fitted to the series is appropriate, and forecast are obtained on the basis of the fitted model.
