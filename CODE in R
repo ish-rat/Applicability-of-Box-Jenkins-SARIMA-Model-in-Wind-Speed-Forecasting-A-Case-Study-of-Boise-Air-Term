@@ -1,0 +1,119 @@
+CODE in R
+
+### Data
+awind <- scan(file="awind.txt",sep="")
+awind
+x.t <- ts(awind,start=1984,freq=12)
+x.t
+### Mean and standard deviation
+n <- length(x.t)
+x.mean <- mean(x.t)
+x.sd <- sd(x.t)
+n
+x.mean
+x.sd
+summary(x.t)
+hist(x.t,xlab="Wind speed in KT(nautical mph)",main="Avg Wind Speed in BOISE AIR TERMINAL, ID US")
+### Time series plot
+dev.new(width=12,height=6)
+par(mfrow=c(1,1),mex=0.75)
+plot.ts(x.t,ylim=c(3,12),xlab="Year",main="Avg Wind Speed in BOISE AIR TERMINAL, ID US")
+### Augmented Dickey-Fuller Test
+tseries::adf.test(x.t)
+tseries::adf.test(x.t_dif.12)
+### Sample ACF & PACF
+dev.new(width=10,height=4)
+par(mfrow=c(1,2),mex=0.75)
+acf(x.t,lag.max=20,ylim=c(-1,1),ylab="Sample ACF",main="")
+pacf(x.t,lag.max=20,ylim=c(-1,1),ylab="Sample PACF",main="")
+### Boxplot by month
+x.t_mtr <- matrix(x.t[1:n],ncol=12,byrow=TRUE)
+x.t_mtr
+dev.new(width=9,height=6)
+par(mfrow=c(1,1))
+boxplot(split(x.t_mtr,col(x.t_mtr)),main="Boxplot by Month")
+### Eliminate seasonality by differencing
+x.t_dif.12 <- diff(x.t,12)
+x.t_dif.12
+dev.new()
+
+9
+
+par(mfrow=c(2,1),mex=0.8)
+plot.ts(x.t,xlab="Year",ylab="wind speed",main="Lag-12 differencing")
+plot.ts(x.t_dif.12,xlab="Year",ylab="lag-12 differencing")
+abline(h=mean(x.t_dif.12),col="blue",lty="dashed")
+### ACF PACF
+dev.new(width=10,height=4)
+par(mfrow=c(1,2),mex=0.75)
+acf(x.t_dif.12,lag.max=24,ylim=c(-1,1),ylab="Sample ACF",main="")
+pacf(x.t_dif.12,lag.max=24,ylim=c(-1,1),ylab="Sample PACF",main="")
+### Augmented Dickey-Fuller Test
+tseries::adf.test(x.t)
+tseries::adf.test(x.t_dif.12)
+tseries::adf.test(x.t_dif.12, k = 0)
+### Fitting SARIMA(p,d,q)*(P,D,Q)_12 model
+fit_100.011 <- arima(x.t,order=c(1,0,0),seasonal=list(order=c(0,1,1),period=12))
+fit_100.011
+### Function to compute AICC
+arma.AICC <- function(fit) {
+n.par <- length(fit$coef)-sum((fit$coef==0))
+n <- fit$nobs
+aicc <- -2*fit$loglik+2*(n.par+1)*n/(n-n.par-2)
+return(aicc)
+}
+arma.AICC(fit_100.011)
+### Candidate model for model diagnostics and forecasting
+fit.bst <- fit_100.011
+dev.new()
+tsdiag(fit.bst,gof.lag=20)
+### Model diagnostics
+w.t <- ts(fit.bst$resid[13:n],start=c(1985),freq=12)
+w.t
+w.mean <- mean(w.t)
+w.sd <- sd(w.t)
+w.mean
+w.sd
+summary(w.t)
+dev.new(width=12,height=6)
+par(mfrow=c(1,1),mex=0.75)
+plot.ts(w.t,ylim=c(-4,4),xlab="Year",main="Residuals")
+dev.new(width=10,height=4)
+par(mfrow=c(1,2),mex=0.75)
+acf(w.t,lag.max=24,ylim=c(-0.5,1),ylab="Sample ACF",main="")
+pacf(w.t,lag.max=24,ylim=c(-0.5,1),ylab="Sample PACF",main="")
+
+10
+
+### Model diagnostics: Ljung-Box portmanteau test
+m <- 10
+n.par <- length(fit.bst$coef)
+LB.out <- Box.test(w.t,lag=m,type="Ljung-Box")
+LB.out
+LB.pval <- pchisq(q=LB.out$statistic,df=m-n.par,lower.tail=FALSE)
+LB.pval
+### Model diagnostics: normality check
+dev.new(height=6,width=12)
+par(mfrow=c(1,2),mex=0.75)
+hist(w.t,freq=FALSE,
+breaks=seq(-4,4,.5),
+col="grey85",ylim=c(0,1),
+main="Residual Histogram")
+z <- seq(-4,4,length=1000)
+lines(z,dnorm(z,mean=w.mean,sd=w.sd),lty=1,col="red")
+qqnorm(w.t)
+qqline(w.t)
+shapiro.test(w.t)
+ks.test(w.t,"pnorm",mean=w.mean,sd=w.sd)
+### Forecasting
+x.fct <- predict(fit.bst,n.ahead=6)
+x.L95 <- x.fct$pred-1.96*x.fct$se
+x.U95 <- x.fct$pred+1.96*x.fct$se
+dev.new(width=12,height=6)
+par(mfrow=c(1,1),mex=0.75)
+ts.plot(x.t,x.fct$pred,col=1:2,ylim=c(0,15),
+main="Average wind speed with 6 Months Predicted")
+lines(x.U95,col="blue",lty="dashed")
+lines(x.L95,col="blue",lty="dashed")
+legend("top",lty=c("solid","solid","dashed"),
+legend=c("Actual","Predicted","Upper & Lower 95%"),col=c("black","red","blue"))
